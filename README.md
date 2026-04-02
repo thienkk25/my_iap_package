@@ -1,226 +1,140 @@
 # 📦 my_iap_package
 
-A lightweight, framework-agnostic wrapper around `in_app_purchase`.
+A modern, lightweight, and framework-agnostic wrapper around Flutter's `in_app_purchase` package. 
 
-⚡ Designed to be:
-
-* Reusable across ANY app (not just VPN)
-* Independent (NO Bloc, Provider, Riverpod)
-* Easily pluggable into any architecture
+Built with **Clean Architecture** principles, this package provides a bulletproof foundation for handling In-App Purchases, Subscriptions, and robust error management without depending on any specific state-management library (No Bloc, No Provider required).
 
 ---
 
-# 🚀 Features
+## ⚡ Features
 
-* ✅ Supports lifetime + subscription
-* ✅ Pure Dart (no state management dependency)
-* ✅ Stream-based updates
-* ✅ Config-driven (no hardcode product IDs)
-* ✅ Easy to reuse across projects
+* ✅ **Clean Architecture:** Strictly separated into Domain, Data, and Presentation/Manager layers.
+* ✅ **Zero State-Management Dependency:** Pure Dart implementation. Easily pluggable into BLoC, Riverpod, Provider, or GetX.
+* ✅ **Robust Stream Handling:** Completely bulletproof `purchaseStream` listener ensuring zero dropped transactions, even during app crashes.
+* ✅ **Fake IAP Mode:** Built-in `enableMockMode` for seamless simulator/emulator UI testing without real App Store connection.
+* ✅ **Config-driven:** Avoid hardcoded IDs. Dynamically load Subscription and Lifetime logic.
+* ✅ **Custom Error Handling:** Strict exception propagation (`IapException`, `IapFailure`) making UI catch blocks highly predictable.
 
 ---
 
-# 📥 Installation
+## 📥 Installation
+
+Add the following to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   my_iap_package:
-    path: ../my_iap_package
+    path: ../my_iap_package # Adjust the path accordingly
 ```
 
----
-
-# ⚠️ Important Setup
-
-👉 You MUST complete platform setup before using
-
-See: `SETUP.md`
+> **⚠️ CRITICAL: Platform Setup**
+> You **MUST** complete Apple App Store and Google Play Console setup before hitting production.
+> See: [SETUP.md](SETUP.md) for detailed instructions.
 
 ---
 
-# 🧠 Usage (No Bloc / No Provider)
+## 🧠 Usage (Production Ready)
 
-## 1. Define Products
+### 1. Define Products
+
+Create a configuration listing your authorized product IDs.
 
 ```dart
 final config = [
-  IapProductConfig(
-    id: 'pro_lifetime',
-    type: IapProductType.lifetime,
-  ),
-  IapProductConfig(
-    id: 'pro_monthly',
+  const IapProductConfig(
+    id: 'com.example.pro_monthly',
     type: IapProductType.subscription,
     duration: Duration(days: 30),
+  ),
+  const IapProductConfig(
+    id: 'com.example.pro_lifetime',
+    type: IapProductType.lifetime,
   ),
 ];
 ```
 
----
+### 2. Initialize the Manager
 
-## 2. Init
+> **Tip:** Set `enableMockMode: true` during local development to use fake products on the Emulator/Simulator where actual store connections fail!
 
 ```dart
-final iap = IapManager();
+final iapManager = IapManager(enableMockMode: true);
 
-await iap.init(config: config);
+// Initialize with config
+await iapManager.init(config: config);
 ```
 
----
-
-## 3. Load Products
+### 3. Load Store Products
 
 ```dart
-final products = await iap.getProducts();
+final products = await iapManager.getProducts();
 ```
 
----
+### 4. Listen to the Entitlement Stream
 
-## 4. Buy
-
-```dart
-await iap.buy(products.first);
-```
-
----
-
-## 5. Restore
+This is the **only** source of truth you need for your UI.
 
 ```dart
-await iap.restore();
-```
+// Listen to errors independently
+iapManager.entitlementStream.listen(
+  (_) {},
+  onError: (error) {
+    print('Transaction Failed: $error');
+  },
+);
 
----
-
-## 6. Listen State (Stream)
-
-```dart
-iap.entitlementStream.listen((entitlement) {
-  if (entitlement.isActive) {
-    print('User has access');
+// StreamBuilder in UI
+StreamBuilder<UserEntitlement>(
+  stream: iapManager.entitlementStream,
+  initialData: UserEntitlement.inactive(),
+  builder: (context, snapshot) {
+    if (snapshot.data!.isActive) {
+      return Text("PRO MEMBER UNLOCKED!");
+    }
+    return Text("FREE TIER");
   }
-});
+)
 ```
 
----
-
-# 🧾 Core Models
-
-## Product Config
+### 5. Buy & Restore
 
 ```dart
-enum IapProductType {
-  lifetime,
-  subscription,
-}
+// Trigger a purchase
+await iapManager.buy(products.first);
 
-class IapProductConfig {
-  final String id;
-  final IapProductType type;
-  final Duration? duration;
-
-  const IapProductConfig({
-    required this.id,
-    required this.type,
-    this.duration,
-  });
-}
+// Restore past purchases
+await iapManager.restore();
 ```
 
 ---
 
-## Entitlement (Unified State)
+## 🧱 Architecture Details
+
+This package is meticulously divided into standard Clean Architecture folders:
+
+* `core/`: Custom exception bounds (`IapException`) and abstract `UseCase` mappings.
+* `domain/`: Business entities (`UserEntitlement`, `IapProduct`) and Repository contracts.
+* `data/`: In-depth `in_app_purchase` API interaction (`IapRemoteDataSourceImpl` & `FakeIapRemoteDataSource`), alongside robust mapping/verification logic inside `IapRepositoryImpl`.
+* `presentation/`: Exposes `IapManager`, acting as a single Facade that auto-injects data dependencies into UseCases.
+
+---
+
+## 🔐 Optional: Backend Receipt Validation
+
+By default, the package maps local receipts automatically. However, for real Production apps, you shouldn't blindly trust client data. Inject your custom Validator to ping your Database/Server:
 
 ```dart
-class UserEntitlement {
-  final bool isActive;
-  final bool isLifetime;
-  final DateTime? expiresAt;
-
-  const UserEntitlement({
-    required this.isActive,
-    required this.isLifetime,
-    this.expiresAt,
-  });
+class MyServerValidator implements ReceiptValidator {
+  @override
+  Future<UserEntitlement> verify(dynamic purchaseData) async {
+    // 1. Send purchaseData (Receipt/Token) to your Node/Python server
+    // 2. Return true Entitlement from server
+  }
 }
+
+final manager = IapManager(validator: MyServerValidator());
 ```
 
 ---
 
-# ⚙️ Core API
-
-```dart
-class IapManager {
-  Future<void> init({required List<IapProductConfig> config});
-
-  Future<List<IapProduct>> getProducts();
-
-  Future<void> buy(IapProduct product);
-
-  Future<void> restore();
-
-  Stream<UserEntitlement> get entitlementStream;
-}
-```
-
----
-
-# 🔐 Optional: Receipt Validation
-
-You can inject your own validator:
-
-```dart
-abstract class ReceiptValidator {
-  Future<UserEntitlement> verify(PurchaseDetails purchase);
-}
-```
-
----
-
-# 🧱 Architecture
-
-```
-Your App
-   ↓
-IapManager
-   ↓
-IapProvider (interface)
-   ↓
-in_app_purchase
-```
-
----
-
-# ⚡ Best Practices
-
-### ✅ Do
-
-* Call `init()` once at app start
-* Always listen to `entitlementStream`
-* Restore purchases on launch
-* Use backend validation for production
-
-### ❌ Avoid
-
-* Hardcoding product IDs inside package
-* Mixing UI logic inside IAP layer
-* Ignoring purchase stream
-
----
-
-# 🧪 Minimal Example
-
-```dart
-final iap = IapManager();
-
-await iap.init(config: config);
-
-final products = await iap.getProducts();
-
-await iap.buy(products.first);
-
-// Listen anywhere (no bloc needed)
-iap.entitlementStream.listen((e) {
-  print(e.isActive);
-});
-```
+*For detailed UI implementation and showcasing, please refer to the `example/` folder included in this setup.*
