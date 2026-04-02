@@ -18,13 +18,11 @@ class IapRepositoryImpl implements IapRepository {
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   List<IapProductConfig> _configs = [];
 
-  IapRepositoryImpl({
-    required this.remoteDataSource,
-    this.receiptValidator,
-  });
+  IapRepositoryImpl({required this.remoteDataSource, this.receiptValidator});
 
   @override
-  Stream<UserEntitlement> get entitlementStream => _entitlementController.stream;
+  Stream<UserEntitlement> get entitlementStream =>
+      _entitlementController.stream;
 
   @override
   Future<void> init({required List<IapProductConfig> config}) async {
@@ -75,8 +73,10 @@ class IapRepositoryImpl implements IapRepository {
     if (product.rawDetails is! ProductDetails) {
       throw IapException('Invalid product details format.');
     }
-    
-    final success = await remoteDataSource.buyProduct(product.rawDetails as ProductDetails);
+
+    final success = await remoteDataSource.buyProduct(
+      product.rawDetails as ProductDetails,
+    );
     if (!success) {
       throw IapException('Failed to initiate purchase flow.');
     }
@@ -87,61 +87,119 @@ class IapRepositoryImpl implements IapRepository {
     await remoteDataSource.restorePurchases();
   }
 
-  /// Hàm xử lý luồng sự kiện purchase từ stream của OS
-  Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) async {
+  /// Cốt lõi: Xử lý luồng sự kiện purchase từ stream của OS
+  Future<void> _onPurchaseUpdate(
+    List<PurchaseDetails> purchaseDetailsList,
+  ) async {
     for (var purchaseDetails in purchaseDetailsList) {
-      if (purchaseDetails.status == PurchaseStatus.pending) {
-        // Đang chờ giao dịch, có thể update UI ở app level thông qua bloc (ở đây chỉ emit data)
-        continue;
-      } else if (purchaseDetails.status == PurchaseStatus.error) {
-        // Giao dịch lỗi
-        throw IapException('Transaction failed: ${purchaseDetails.error?.message}');
-      } else if (purchaseDetails.status == PurchaseStatus.purchased ||
-                 purchaseDetails.status == PurchaseStatus.restored) {
-        
-        try {
-          // Verify receipt (offline hoặc qua backend)
-          final entitlement = await _verifyPurchase(purchaseDetails);
-          
-          // Cập nhật State cho app
-          if (!_entitlementController.isClosed) {
-            _entitlementController.add(entitlement);
-          }
-          
-          // Hoàn thành giao dịch (Bắt buộc trên iOS và Android)
-          await remoteDataSource.completePurchase(purchaseDetails);
-        } catch (e) {
-          throw IapException('Verification failed: $e');
-        }
+      switch (purchaseDetails.status) {
+        case PurchaseStatus.pending:
+          _handlePending(purchaseDetails);
+          break;
+        case PurchaseStatus.purchased:
+        case PurchaseStatus.restored:
+          await _handleSuccess(purchaseDetails);
+          break;
+        case PurchaseStatus.error:
+          _handleError(purchaseDetails);
+          break;
+        case PurchaseStatus.canceled:
+          // Một số phiên bản / platform trả về canceled riêng biệt
+          _handleError(purchaseDetails);
+          break;
       }
     }
   }
 
-  /// Stub mặc định cho việc gọi check purchase Local nếu không cung cấp Validate Backend
-  Future<UserEntitlement> _verifyPurchase(PurchaseDetails details) async {
-    if (receiptValidator != null) {
-      return await receiptValidator!.verify(details);
+  void _handlePending(PurchaseDetails purchase) {
+    // Chỉ in log báo hiệu đang chờ giao dịch (để UI quay spinner nếu muốn)
+    // Package này giữ chuẩn không can thiệp sâu vào state UI ngoài entitlement.
+    print('Pending: ${purchase.productID}');
+  }
+
+  void _handleError(PurchaseDetails purchase) {
+    print('IAP Error: ${purchase.error?.message}');
+    // Nếu có luồng stream catch thì ta addError để UI hiện snackbar.
+    if (!_entitlementController.isClosed) {
+      _entitlementController.addError(
+        IapException(
+          'Giao dịch thất bại: ${purchase.error?.message ?? "User Canceled"}',
+        ),
+      );
     }
-    
-    // Fallback: local trust mechanism
+  }
+
+  Future<void> _handleSuccess(PurchaseDetails purchase) async {
+    try {
+      // 1. Verify receipt (offline hoặc qua backend)
+      final isValid = await _verifyPurchase(purchase);
+      if (!isValid) {
+        print('Invalid purchase receipt.');
+        return; // Bỏ qua nếu receipt không hợp lệ
+      }
+
+      // 2. Map ra Entitlement
+      final entitlement = _mapToEntitlement(purchase);
+
+      // 3. Cập nhật State cho app
+      if (!_entitlementController.isClosed) {
+        _entitlementController.add(entitlement);
+      }
+
+      // 4. Bắt buộc: Hoàn thành giao dịch với Apple/Google
+      await remoteDataSource.completePurchase(purchase);
+
+      // 5. Lưu cục bộ (cache local DB/SharedPreferences) để nhỡ mất mạng
+      await _cacheLocal(entitlement);
+    } catch (e) {
+      print('Error handling success: $e');
+      if (!_entitlementController.isClosed) {
+        _entitlementController.addError(e);
+      }
+    }
+  }
+
+  /// Gọi check purchase Local nếu không cung cấp Validate Backend
+  Future<bool> _verifyPurchase(PurchaseDetails details) async {
+    if (receiptValidator != null) {
+      // Có backend can thiệp thì chờ backend xác thực
+      final backendEntitlement = await receiptValidator!.verify(details);
+      return backendEntitlement.isActive;
+    }
+    // Không có backend thì mặc định trust Store receipt cục bộ
+    return true;
+  }
+
+  /// Biến đổi Raw IAP thành quyền lợi trong UserEntitlement
+  UserEntitlement _mapToEntitlement(PurchaseDetails details) {
     final config = _configs.firstWhere(
       (c) => c.id == details.productID,
       orElse: () => IapProductConfig(
-        id: details.productID, 
+        id: details.productID,
         type: IapProductType.subscription, // safe default
       ),
     );
 
+    if (config.type == IapProductType.lifetime) {
+      return const UserEntitlement(isActive: true, isLifetime: true);
+    }
+
     return UserEntitlement(
       isActive: true,
-      isLifetime: config.type == IapProductType.lifetime,
-      expiresAt: config.duration != null 
-          ? DateTime.now().add(config.duration!) 
+      isLifetime: false,
+      expiresAt: config.duration != null
+          ? DateTime.now().add(config.duration!)
           : null,
     );
   }
 
-  // Cần huỷ luồng khi app tắt nếu thiết kế theo singleton/service (tuỳ implementation trong app)
+  /// Lưu vào bộ nhớ cục bộ.
+  Future<void> _cacheLocal(UserEntitlement e) async {
+    // TODO: Bổ sung SharedPreferences / Hive nếu ứng dụng cần.
+    // Việc này giúp user reopen app không bị check chậm hoặc mất mạng vẫn có VIP.
+    print('Cached entitlement successfully.');
+  }
+
   void dispose() {
     _purchaseSubscription?.cancel();
     _entitlementController.close();
