@@ -24,8 +24,9 @@ Add the following to your `pubspec.yaml`:
 ```yaml
 dependencies:
   my_iap_package:
-    url: https://github.com/thienkk25/my_iap_package.git
-    ref: main
+    git:
+      url: https://github.com/thienkk25/my_iap_package.git
+      ref: main
 ```
 
 > **⚠️ CRITICAL: Platform Setup**
