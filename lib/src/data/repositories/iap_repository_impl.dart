@@ -55,6 +55,19 @@ class IapRepositoryImpl implements IapRepository {
       throw IapException('Failed to load products: ${response.error!.message}');
     }
 
+    // In log cảnh báo để dễ debug khi productID không hợp lệ
+    if (response.notFoundIDs.isNotEmpty) {
+      print(
+        'IAP Warning: Các Product IDs sau không tìm thấy trên Store: ${response.notFoundIDs}',
+      );
+    }
+
+    // Nếu không tìm thấy bất kỳ sản phẩm nào, có thể cân nhắc quăng lỗi luôn
+    // hoặc giữ nguyên trả về list rỗng tuỳ hệ thống UI của bạn xử lý ra sao.
+    if (response.productDetails.isEmpty) {
+      print('IAP Warning: Không tìm thấy bất kỳ sản phẩm hợp lệ nào.');
+    }
+
     return response.productDetails.map((details) {
       return IapProduct(
         id: details.id,
