@@ -131,15 +131,7 @@ class IapRepositoryImpl implements IapRepository {
   }
 
   void _handleError(PurchaseDetails purchase) {
-    print('IAP Error: ${purchase.error?.message}');
-    // Nếu có luồng stream catch thì ta addError để UI hiện snackbar.
-    if (!_entitlementController.isClosed) {
-      _entitlementController.addError(
-        IapException(
-          'Giao dịch thất bại: ${purchase.error?.message ?? "User Canceled"}',
-        ),
-      );
-    }
+    print('IAP Error: ${purchase.error?.message ?? "User Canceled"}');
   }
 
   Future<void> _handleSuccess(PurchaseDetails purchase) async {

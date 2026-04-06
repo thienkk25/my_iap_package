@@ -40,22 +40,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   void initState() {
     super.initState();
     _initIap();
-
-    // Lắng nghe lỗi giao dịch từ Stream để hiển thị thông báo.
-    // Vì entitlementStream là broadcast, ta có thể listen độc lập với StreamBuilder.
-    _iapManager.entitlementStream.listen(
-      (_) {}, // Bỏ qua data event vì StreamBuilder đã lo việc render UI.
-      onError: (error) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.toString(), style: const TextStyle(color: Colors.white)),
-            backgroundColor: Colors.red.shade800,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _initIap() async {
