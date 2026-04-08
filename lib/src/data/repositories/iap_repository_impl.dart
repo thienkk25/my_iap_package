@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../core/error/exceptions.dart';
@@ -57,15 +58,19 @@ class IapRepositoryImpl implements IapRepository {
 
     // In log cảnh báo để dễ debug khi productID không hợp lệ
     if (response.notFoundIDs.isNotEmpty) {
-      print(
-        'IAP Warning: Các Product IDs sau không tìm thấy trên Store: ${response.notFoundIDs}',
-      );
+      if (kDebugMode) {
+        print(
+          'IAP Warning: Các Product IDs sau không tìm thấy trên Store: ${response.notFoundIDs}',
+        );
+      }
     }
 
     // Nếu không tìm thấy bất kỳ sản phẩm nào, có thể cân nhắc quăng lỗi luôn
     // hoặc giữ nguyên trả về list rỗng tuỳ hệ thống UI của bạn xử lý ra sao.
     if (response.productDetails.isEmpty) {
-      print('IAP Warning: Không tìm thấy bất kỳ sản phẩm hợp lệ nào.');
+      if (kDebugMode) {
+        print('IAP Warning: Không tìm thấy bất kỳ sản phẩm hợp lệ nào.');
+      }
     }
 
     return response.productDetails.map((details) {
@@ -114,11 +119,11 @@ class IapRepositoryImpl implements IapRepository {
           await _handleSuccess(purchaseDetails);
           break;
         case PurchaseStatus.error:
-          _handleError(purchaseDetails);
+          await _handleError(purchaseDetails);
           break;
         case PurchaseStatus.canceled:
           // Một số phiên bản / platform trả về canceled riêng biệt
-          _handleError(purchaseDetails);
+          await _handleError(purchaseDetails);
           break;
       }
     }
@@ -127,11 +132,16 @@ class IapRepositoryImpl implements IapRepository {
   void _handlePending(PurchaseDetails purchase) {
     // Chỉ in log báo hiệu đang chờ giao dịch (để UI quay spinner nếu muốn)
     // Package này giữ chuẩn không can thiệp sâu vào state UI ngoài entitlement.
-    print('Pending: ${purchase.productID}');
+    if (kDebugMode) {
+      print('Pending: ${purchase.productID}');
+    }
   }
 
-  void _handleError(PurchaseDetails purchase) {
-    print('IAP Error: ${purchase.error?.message ?? "User Canceled"}');
+  Future<void> _handleError(PurchaseDetails purchase) async {
+    if (kDebugMode) {
+      print('IAP Error: ${purchase.error?.message ?? "User Canceled"}');
+    }
+    await remoteDataSource.completePurchase(purchase);
   }
 
   Future<void> _handleSuccess(PurchaseDetails purchase) async {
@@ -139,7 +149,10 @@ class IapRepositoryImpl implements IapRepository {
       // 1. Verify receipt (offline hoặc qua backend)
       final isValid = await _verifyPurchase(purchase);
       if (!isValid) {
-        print('Invalid purchase receipt.');
+        if (kDebugMode) {
+          print('Invalid purchase receipt. Removing from queue.');
+        }
+        await remoteDataSource.completePurchase(purchase);
         return; // Bỏ qua nếu receipt không hợp lệ
       }
 
@@ -157,7 +170,9 @@ class IapRepositoryImpl implements IapRepository {
       // 5. Lưu cục bộ (cache local DB/SharedPreferences) để nhỡ mất mạng
       await _cacheLocal(entitlement);
     } catch (e) {
-      print('Error handling success: $e');
+      if (kDebugMode) {
+        print('Error handling success: $e');
+      }
       if (!_entitlementController.isClosed) {
         _entitlementController.addError(e);
       }
@@ -200,9 +215,11 @@ class IapRepositoryImpl implements IapRepository {
 
   /// Lưu vào bộ nhớ cục bộ.
   Future<void> _cacheLocal(UserEntitlement e) async {
-    // TODO: Bổ sung SharedPreferences / Hive nếu ứng dụng cần.
+    // Bổ sung SharedPreferences / Hive nếu ứng dụng cần.
     // Việc này giúp user reopen app không bị check chậm hoặc mất mạng vẫn có VIP.
-    print('Cached entitlement successfully.');
+    if (kDebugMode) {
+      print('Cached entitlement successfully.');
+    }
   }
 
   void dispose() {
