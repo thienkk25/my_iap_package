@@ -11,10 +11,14 @@ class UserEntitlement {
   /// Sẽ là null nếu user mua lifetime hoặc không có gói nào đang active.
   final DateTime? expiresAt;
 
+  /// ID của gói dịch vụ đang active
+  final String? activeProductId;
+
   const UserEntitlement({
     required this.isActive,
     required this.isLifetime,
     this.expiresAt,
+    this.activeProductId,
   });
 
   /// Factory helper: tạo trạng thái rỗng chưa mua bất cứ thứ gì.
@@ -23,6 +27,7 @@ class UserEntitlement {
       isActive: false,
       isLifetime: false,
       expiresAt: null,
+      activeProductId: null,
     );
   }
 }

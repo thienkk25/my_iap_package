@@ -201,12 +201,17 @@ class IapRepositoryImpl implements IapRepository {
     );
 
     if (config.type == IapProductType.lifetime) {
-      return const UserEntitlement(isActive: true, isLifetime: true);
+      return UserEntitlement(
+        isActive: true, 
+        isLifetime: true,
+        activeProductId: details.productID,
+      );
     }
 
     return UserEntitlement(
       isActive: true,
       isLifetime: false,
+      activeProductId: details.productID,
       expiresAt: config.duration != null
           ? DateTime.now().add(config.duration!)
           : null,
