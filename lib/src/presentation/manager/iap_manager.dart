@@ -2,10 +2,12 @@ import '../../core/usecases/usecase.dart';
 import '../../domain/entities/iap_product.dart';
 import '../../domain/entities/iap_product_config.dart';
 import '../../domain/entities/user_entitlement.dart';
+import '../../domain/entities/promotional_offer_signature.dart';
 
 import '../../domain/usecases/init_iap_usecase.dart';
 import '../../domain/usecases/get_products_usecase.dart';
 import '../../domain/usecases/buy_product_usecase.dart';
+import '../../domain/usecases/buy_promotional_offer_usecase.dart';
 import '../../domain/usecases/restore_purchases_usecase.dart';
 import '../../domain/usecases/listen_entitlements_usecase.dart';
 
@@ -20,6 +22,7 @@ class IapManager {
   late final InitIapUseCase _initIapUseCase;
   late final GetProductsUseCase _getProductsUseCase;
   late final BuyProductUseCase _buyProductUseCase;
+  late final BuyPromotionalOfferUseCase _buyPromotionalOfferUseCase;
   late final RestorePurchasesUseCase _restorePurchasesUseCase;
   late final ListenEntitlementsUseCase _listenEntitlementsUseCase;
 
@@ -36,6 +39,7 @@ class IapManager {
     _initIapUseCase = InitIapUseCase(repository);
     _getProductsUseCase = GetProductsUseCase(repository);
     _buyProductUseCase = BuyProductUseCase(repository);
+    _buyPromotionalOfferUseCase = BuyPromotionalOfferUseCase(repository);
     _restorePurchasesUseCase = RestorePurchasesUseCase(repository);
     _listenEntitlementsUseCase = ListenEntitlementsUseCase(repository);
   }
@@ -53,6 +57,16 @@ class IapManager {
   /// Tiến hành mua một sản phẩm.
   Future<void> buy(IapProduct product) async {
     await _buyProductUseCase(product);
+  }
+
+  /// Tiến hành mua sản phẩm với Promotional Offer (StoreKit).
+  Future<void> buyPromotionalOffer(IapProduct product, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName}) async {
+    await _buyPromotionalOfferUseCase(BuyPromotionalOfferParams(
+      product: product,
+      offerIdentifier: offerIdentifier,
+      signature: signature,
+      applicationUserName: applicationUserName,
+    ));
   }
 
   /// Khôi phục các giao dịch trong quá khứ.

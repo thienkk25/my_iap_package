@@ -7,6 +7,7 @@ import '../../domain/entities/iap_product.dart';
 import '../../domain/entities/iap_product_config.dart';
 import '../../domain/entities/iap_product_type.dart';
 import '../../domain/entities/user_entitlement.dart';
+import '../../domain/entities/promotional_offer_signature.dart';
 import '../../domain/repositories/iap_repository.dart';
 import '../../domain/repositories/receipt_validator.dart';
 import '../datasources/iap_remote_datasource.dart';
@@ -97,6 +98,24 @@ class IapRepositoryImpl implements IapRepository {
     );
     if (!success) {
       throw IapException('Failed to initiate purchase flow.');
+    }
+  }
+
+  @override
+  Future<void> buyPromotionalOffer(IapProduct product, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName}) async {
+    if (product.rawDetails is! ProductDetails) {
+      throw IapException('Invalid product details format.');
+    }
+
+    final success = await remoteDataSource.buyPromotionalOffer(
+      product.rawDetails as ProductDetails,
+      offerIdentifier,
+      signature,
+      applicationUserName: applicationUserName,
+    );
+    
+    if (!success) {
+      throw IapException('Failed to initiate promotional purchase flow.');
     }
   }
 

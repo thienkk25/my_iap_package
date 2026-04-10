@@ -11,6 +11,7 @@ export 'src/domain/entities/iap_product_type.dart';
 export 'src/domain/entities/iap_product_config.dart';
 export 'src/domain/entities/user_entitlement.dart';
 export 'src/domain/entities/iap_product.dart';
+export 'src/domain/entities/promotional_offer_signature.dart';
 
 // Domain Repositories (Dành cho custom validation nếu có)
 export 'src/domain/repositories/receipt_validator.dart';
