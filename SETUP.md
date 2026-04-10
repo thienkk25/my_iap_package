@@ -74,7 +74,6 @@ Package unblocks entitlement locally!
 ## ⚠️ Common Troubleshooting
 
 ### Q: Why is `_products` an empty array during `getProducts`?
-- Check if you are on a Simulator/Emulator. Use `enableMockMode: true` in your code!
 - Your Bundle ID in `pubspec.yaml` / Xcode does not match App Store / Play Console.
 - You did not sign all Paid App tax agreements on Apple.
 

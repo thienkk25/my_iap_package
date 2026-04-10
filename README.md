@@ -11,7 +11,6 @@ Built with **Clean Architecture** principles, this package provides a bulletproo
 * ✅ **Clean Architecture:** Strictly separated into Domain, Data, and Presentation/Manager layers.
 * ✅ **Zero State-Management Dependency:** Pure Dart implementation. Easily pluggable into BLoC, Riverpod, Provider, or GetX.
 * ✅ **Robust Stream Handling:** Completely bulletproof `purchaseStream` listener ensuring zero dropped transactions, even during app crashes.
-* ✅ **Fake IAP Mode:** Built-in `enableMockMode` for seamless simulator/emulator UI testing without real App Store connection.
 * ✅ **Config-driven:** Avoid hardcoded IDs. Dynamically load Subscription and Lifetime logic.
 * ✅ **Custom Error Handling:** Strict exception propagation (`IapException`, `IapFailure`) making UI catch blocks highly predictable.
 
@@ -57,10 +56,8 @@ final config = [
 
 ### 2. Initialize the Manager
 
-> **Tip:** Set `enableMockMode: true` during local development to use fake products on the Emulator/Simulator where actual store connections fail!
-
 ```dart
-final iapManager = IapManager(enableMockMode: true);
+final iapManager = IapManager();
 
 // Initialize with config
 await iapManager.init(config: config);
