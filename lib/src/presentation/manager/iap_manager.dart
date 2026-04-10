@@ -10,7 +10,6 @@ import '../../domain/usecases/restore_purchases_usecase.dart';
 import '../../domain/usecases/listen_entitlements_usecase.dart';
 
 import '../../data/datasources/iap_remote_datasource.dart';
-import '../../data/datasources/fake_iap_remote_datasource.dart';
 import '../../data/repositories/iap_repository_impl.dart';
 import '../../domain/repositories/receipt_validator.dart';
 
@@ -25,13 +24,10 @@ class IapManager {
   late final ListenEntitlementsUseCase _listenEntitlementsUseCase;
 
   /// Tạo một IapManager mới, tuỳ chọn truyền vào ReceiptValidator nếu bạn có backend.
-  /// Bật [enableMockMode] = true để test IAP trên máy ảo trơn tru không bị lỗi.
-  IapManager({ReceiptValidator? validator, bool enableMockMode = false}) {
+  IapManager({ReceiptValidator? validator}) {
     // Dependency Injection thủ công (Manual DI) để package tự chạy không cần `get_it`.
-    final remoteDataSource = enableMockMode 
-        ? FakeIapRemoteDataSource() 
-        : IapRemoteDataSourceImpl();
-    
+    final remoteDataSource = IapRemoteDataSourceImpl();
+
     final repository = IapRepositoryImpl(
       remoteDataSource: remoteDataSource,
       receiptValidator: validator,
