@@ -21,6 +21,9 @@ abstract class IapRepository {
   /// Khôi phục (restore) lại các đơn hàng đã mua trong quá khứ. (Apple bắt buộc phải có tính năng này).
   Future<void> restore();
 
+  /// Hiển thị màn hình nhập mã ưu đãi (Offer Codes) do Apple cung cấp (Chỉ hoạt động trên iOS 14+).
+  Future<void> presentCodeRedemptionSheet();
+
   /// Stream trả về trạng thái quyền lợi mới nhất của người dùng cục bộ.
   Stream<UserEntitlement> get entitlementStream;
 }

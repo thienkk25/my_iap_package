@@ -95,11 +95,26 @@ StreamBuilder<UserEntitlement>(
 )
 ```
 
-### 5. Buy & Restore
+### 5. Buy & Restore & Offers
 
 ```dart
-// Trigger a purchase
+// Trigger a normal purchase (Introductory offers & Trials are handled automatically by the OS)
 await iapManager.buy(products.first);
+
+// Trigger a Promotional Offer purchase (iOS only - requires signature from backend)
+await iapManager.buyPromotionalOffer(
+  products.first,
+  'promo_discount_identifier',
+  PromotionalOfferSignature(
+    keyIdentifier: '...',
+    nonce: '...',
+    signature: '...',
+    timestamp: 123456789,
+  ),
+);
+
+// Present Offer Code Redemption Sheet (iOS 14+ only)
+await iapManager.presentCodeRedemptionSheet();
 
 // Restore past purchases
 await iapManager.restore();

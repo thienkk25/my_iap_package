@@ -124,6 +124,11 @@ class IapRepositoryImpl implements IapRepository {
     await remoteDataSource.restorePurchases();
   }
 
+  @override
+  Future<void> presentCodeRedemptionSheet() async {
+    await remoteDataSource.presentCodeRedemptionSheet();
+  }
+
   /// Cốt lõi: Xử lý luồng sự kiện purchase từ stream của OS
   Future<void> _onPurchaseUpdate(
     List<PurchaseDetails> purchaseDetailsList,

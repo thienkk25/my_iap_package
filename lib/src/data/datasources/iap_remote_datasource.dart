@@ -13,6 +13,7 @@ abstract class IapRemoteDataSource {
   Future<bool> buyProduct(ProductDetails productDetails);
   Future<bool> buyPromotionalOffer(ProductDetails productDetails, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName});
   Future<void> restorePurchases();
+  Future<void> presentCodeRedemptionSheet();
   Future<void> completePurchase(PurchaseDetails purchaseDetails);
   Stream<List<PurchaseDetails>> get purchaseStream;
 }
@@ -86,6 +87,21 @@ class IapRemoteDataSourceImpl implements IapRemoteDataSource {
       await _inAppPurchase.restorePurchases();
     } catch (e) {
       throw IapException('Failed to restore purchases: $e');
+    }
+  }
+
+  @override
+  Future<void> presentCodeRedemptionSheet() async {
+    try {
+      if (Platform.isIOS) {
+        final InAppPurchaseStoreKitPlatformAddition iosPlatformAddition =
+            _inAppPurchase.getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
+        await iosPlatformAddition.presentCodeRedemptionSheet();
+      } else {
+        throw IapException('Offer codes redemption is only supported on iOS platforms.');
+      }
+    } catch (e) {
+      throw IapException('Failed to present code redemption sheet: $e');
     }
   }
 

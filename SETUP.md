@@ -23,6 +23,12 @@ Integrating In-App Purchases (IAP) requires explicit native configuration.
 > **⚠️ WARNING:** 
 > IDs MUST match what you supply in `IapProductConfig`.
 
+### 3. Setup Offers (Optional)
+If you plan to use Introductory Offers, Promotional Offers, or Offer Codes in iOS:
+1. **Introductory Offers**: Go to your Subscription > **Subscription Prices** > **Introductory Offers** (+). Set your trial or discounted price. This applies automatically.
+2. **Promotional Offers**: Go to your Subscription > **Promotional Offers** (+). Create a Reference Name and a **Promotional Offer ID** (this is your `offerIdentifier`). You will also need to generate a Subscription Key in Users and Access -> Keys.
+3. **Offer Codes**: Let users redeem codes outside the app. Go to your Subscription > **Offer Codes** (+) and specify your rules and codes. Use `presentCodeRedemptionSheet()` in your app to let users redeem them.
+
 ### 3. Agreements & Sandbox
 1. Complete all **Agreements, Tax, and Banking** documents on App Store Connect. (If this is not done, IAP fetches will silently fail in Xcode).
 2. Create Sandbox Tester accounts. Log into them via your physical iPhone Settings > App Store > Sandbox Account to test purchases without a credit card.

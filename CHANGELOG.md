@@ -1,3 +1,9 @@
+## 1.1.0
+
+* **[Feature]** Added support for Apple Offer Codes (`presentCodeRedemptionSheet()`) to allow users to redeem promo codes within the app natively.
+* **[Documentation]** Added extensive JSDoc/DartDoc explanations for Introductory Offers, Promotional Offers, and Offer Codes in `IapManager`.
+* **[Doc Update]** Updated `README.md` and `SETUP.md` with Offer Code setup and implementation details for Apple StoreKit.
+
 ## 1.0.0
 
 * **[Major Architecture Refactoring]** Completely migrated the package entirely to pure Clean Architecture standards.
