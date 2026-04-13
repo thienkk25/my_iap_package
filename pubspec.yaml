@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   in_app_purchase: ^3.2.3
-  in_app_purchase_storekit: ^3.2.0
+  in_app_purchase_storekit: ^0.4.8+1
 
 dev_dependencies:
   flutter_test:
