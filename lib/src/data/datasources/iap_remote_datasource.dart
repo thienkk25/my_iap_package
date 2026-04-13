@@ -8,13 +8,28 @@ import '../../domain/entities/promotional_offer_signature.dart';
 
 /// Abstract class định nghĩa các phương thức lấy dữ liệu từ `in_app_purchase` local/remote.
 abstract class IapRemoteDataSource {
+  /// Kiểm tra xem Store có đang hiển thị và hoạt động trên thiết bị này hay không.
   Future<bool> isAvailable();
+
+  /// Truy vấn thông tin các sản phẩm theo danh sách [identifiers].
   Future<ProductDetailsResponse> queryProductDetails(Set<String> identifiers);
+
+  /// Khởi tạo một giao dịch mua sản phẩm thông thường.
   Future<bool> buyProduct(ProductDetails productDetails);
+
+  /// Khởi tạo một giao dịch mua sản phẩm với mã khuyến mãi (chỉ hỗ trợ trên thiết bị Apple).
   Future<bool> buyPromotionalOffer(ProductDetails productDetails, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName});
+
+  /// Yêu cầu khôi phục các giao dịch đã mua trong quá khứ.
   Future<void> restorePurchases();
+
+  /// Yêu cầu hiển thị trang nhập mã khuyến mãi (App Store Offer Sheet).
   Future<void> presentCodeRedemptionSheet();
+
+  /// Đánh dấu đã hoàn thành xử lý cho một giao dịch với Store (bắt buộc gọi vào cuối luồng xử lý).
   Future<void> completePurchase(PurchaseDetails purchaseDetails);
+
+  /// Stream trả về danh sách các thay đổi trạng thái mua hàng (Pending, Success, Error).
   Stream<List<PurchaseDetails>> get purchaseStream;
 }
 

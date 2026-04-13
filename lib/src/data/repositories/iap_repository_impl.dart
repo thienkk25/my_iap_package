@@ -12,12 +12,21 @@ import '../../domain/repositories/iap_repository.dart';
 import '../../domain/repositories/receipt_validator.dart';
 import '../datasources/iap_remote_datasource.dart';
 
+/// Triển khai thực tế của [IapRepository] sử dụng `in_app_purchase` thông qua [IapRemoteDataSource].
 class IapRepositoryImpl implements IapRepository {
+  /// DataSource chịu trách nhiệm giao tiếp trực tiếp với native Store SDK.
   final IapRemoteDataSource remoteDataSource;
+
+  /// Interface kiểm tra receipt trả về từ native SDK, cung cấp khả năng validate hóa đơn từ backend.
   final ReceiptValidator? receiptValidator;
 
+  /// Bộ điều khiển luồng phát ra thông tin Quyền Lợi (Entitlement) của người dùng.
   final _entitlementController = StreamController<UserEntitlement>.broadcast();
+
+  /// Subscription để lắng nghe thay đổi trạng thái mua hàng.
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
+
+  /// Danh sách cấu hình của các sản phẩm đang được phục vụ bởi ứng dụng.
   List<IapProductConfig> _configs = [];
 
   IapRepositoryImpl({required this.remoteDataSource, this.receiptValidator});
