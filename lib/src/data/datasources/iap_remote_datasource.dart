@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 import '../../core/error/exceptions.dart';
 import '../../domain/entities/promotional_offer_signature.dart';
 
@@ -59,7 +60,7 @@ class IapRemoteDataSourceImpl implements IapRemoteDataSource {
         throw IapException('Promotional offers are only supported on Apple platforms.');
       }
 
-      final paymentDiscount = AppStorePaymentDiscount(
+      final paymentDiscount = SKPaymentDiscountWrapper(
         keyIdentifier: signature.keyIdentifier,
         nonce: signature.nonce,
         signature: signature.signature,
@@ -70,18 +71,10 @@ class IapRemoteDataSourceImpl implements IapRemoteDataSource {
       final purchaseParam = AppStorePurchaseParam(
         productDetails: productDetails,
         applicationUserName: applicationUserName,
+        discount: paymentDiscount,
       );
 
-      // Attempt to copy or set discount
-      AppStorePurchaseParam finalParam;
-      try {
-        finalParam = (purchaseParam as dynamic).copyWith(paymentDiscount: paymentDiscount) as AppStorePurchaseParam;
-      } catch (e) {
-        // Fallback for newer package versions where it might be in constructor
-        throw IapException('Failed to cast to AppStorePurchaseParam with paymentDiscount: $e');
-      }
-
-      return await _inAppPurchase.buyNonConsumable(purchaseParam: finalParam);
+      return await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
     } catch (e) {
       throw IapException('Failed to buy promotional offer: $e');
     }
