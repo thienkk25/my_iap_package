@@ -1,6 +1,6 @@
 name: my_iap_package
 description: "A lightweight, framework-agnostic wrapper for in_app_purchase with support for subscriptions and lifetime purchases."
-version: 1.0.0+1
+version: 1.1.0+1
 homepage:
 
 environment:
