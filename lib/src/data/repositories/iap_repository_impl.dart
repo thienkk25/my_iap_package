@@ -206,6 +206,19 @@ class IapRepositoryImpl implements IapRepository {
       if (kDebugMode) {
         print('Error handling success: $e');
       }
+      // Chống treo hàng đợi StoreKit: Nếu lỗi là từ chối do trùng lặp tài khoản (Backend ném ra)
+      // thì BẮT BUỘC phải completePurchase để xóa hóa đơn vĩnh viễn khỏi hàng đợi của OS, 
+      // nếu không mỗi lần mở app lên OS sẽ lại auto gửi lên lỗi lại (vòng lặp vô hạn).
+      if (e.toString().contains('liên kết với một tài khoản khác') || 
+          e.toString().contains('liên kết với tài khoản') ||
+          e.toString().contains('Account hopping')) {
+         try {
+           await remoteDataSource.completePurchase(purchase);
+         } catch (finishErr) {
+           if (kDebugMode) print('Could not complete rejected purchase: $finishErr');
+         }
+      }
+
       if (!_entitlementController.isClosed) {
         _entitlementController.addError(e);
       }
