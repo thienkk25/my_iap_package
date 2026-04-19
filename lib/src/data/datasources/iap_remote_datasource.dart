@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 import '../../core/error/exceptions.dart';
 import '../../domain/entities/promotional_offer_signature.dart';
 
@@ -17,7 +16,7 @@ abstract class IapRemoteDataSource {
   /// Khởi tạo một giao dịch mua sản phẩm thông thường.
   Future<bool> buyProduct(ProductDetails productDetails);
 
-  /// Khởi tạo một giao dịch mua sản phẩm với mã khuyến mãi (chỉ hỗ trợ trên thiết bị Apple).
+  /// Khởi tạo một giao dịch mua sản phẩm với Promotional Offer (StoreKit 2 — chỉ hỗ trợ trên Apple).
   Future<bool> buyPromotionalOffer(ProductDetails productDetails, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName});
 
   /// Yêu cầu khôi phục các giao dịch đã mua trong quá khứ.
@@ -34,6 +33,7 @@ abstract class IapRemoteDataSource {
 }
 
 /// Implement của `IapRemoteDataSource` sử dụng thư viện `in_app_purchase` của Flutter.
+/// Toàn bộ luồng iOS sử dụng StoreKit 2 (mặc định từ `in_app_purchase_storekit` 0.4.0+).
 class IapRemoteDataSourceImpl implements IapRemoteDataSource {
   final InAppPurchase _inAppPurchase;
 
@@ -76,18 +76,22 @@ class IapRemoteDataSourceImpl implements IapRemoteDataSource {
         throw IapException('Promotional offers are only supported on Apple platforms.');
       }
 
-      final paymentDiscount = SKPaymentDiscountWrapper(
-        keyIdentifier: signature.keyIdentifier,
+      // StoreKit 2: Sử dụng SK2SubscriptionOfferSignature + SK2PromotionalOffer + Sk2PurchaseParam
+      final sk2Signature = SK2SubscriptionOfferSignature(
+        keyID: signature.keyIdentifier,
         nonce: signature.nonce,
         signature: signature.signature,
         timestamp: signature.timestamp,
-        identifier: offerIdentifier,
       );
 
-      final purchaseParam = AppStorePurchaseParam(
+      final promotionalOffer = SK2PromotionalOffer(
+        offerId: offerIdentifier,
+        signature: sk2Signature,
+      );
+
+      final purchaseParam = Sk2PurchaseParam(
         productDetails: productDetails,
-        applicationUserName: applicationUserName,
-        discount: paymentDiscount,
+        promotionalOffer: promotionalOffer,
       );
 
       return await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);

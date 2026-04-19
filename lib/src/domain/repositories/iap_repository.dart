@@ -15,7 +15,7 @@ abstract class IapRepository {
   /// Thực hiện mua một sản phẩm.
   Future<void> buy(IapProduct product);
 
-  /// Thực hiện mua một sản phẩm kèm theo ưu đãi (Promotional Offer - StoreKit).
+  /// Thực hiện mua một sản phẩm kèm theo ưu đãi (Promotional Offer - StoreKit 2).
   Future<void> buyPromotionalOffer(IapProduct product, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName});
 
   /// Khôi phục (restore) lại các đơn hàng đã mua trong quá khứ. (Apple bắt buộc phải có tính năng này).

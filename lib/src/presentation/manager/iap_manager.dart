@@ -71,7 +71,7 @@ class IapManager {
     await _buyProductUseCase(product);
   }
 
-  /// Tiến hành mua sản phẩm với Promotional Offer (Dành riêng cho StoreKit / iOS).
+  /// Tiến hành mua sản phẩm với Promotional Offer (Dành riêng cho StoreKit 2 / iOS).
   /// 
   /// **Tích hợp Promotional Offer (Ưu đãi giữ chân người dùng):**
   /// Được dùng khi bạn muốn cấp mã giảm giá hoặc giá rẻ hơn cho NGƯỜI ĐÃ TỪNG MUA (đã huỷ gia hạn).
@@ -80,7 +80,8 @@ class IapManager {
   /// 1. App yêu cầu Server của bạn sinh ra 1 chữ ký bảo mật (Signature).
   /// 2. Server gọi hàm `generatePromotionalSignature()` để ký và trả về Client.
   /// 3. Client lấy chữ ký đó gán vào `PromotionalOfferSignature` và truyền vào đây.
-  /// 4. Hàm này sẽ truyền Signature trực tiếp xuống Apple StoreKit để mua gói Offer.
+  /// 4. Hàm này sẽ truyền Signature trực tiếp xuống Apple StoreKit 2 để mua gói Offer
+  ///    thông qua `Sk2PurchaseParam` + `SK2PromotionalOffer`.
   Future<void> buyPromotionalOffer(IapProduct product, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName}) async {
     await _buyPromotionalOfferUseCase(BuyPromotionalOfferParams(
       product: product,

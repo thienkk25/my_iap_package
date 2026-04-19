@@ -1,5 +1,6 @@
 /// Lớp đại diện cho chữ ký bảo mật (signature) dùng để xác thực một ưu đãi (Promotional Offer) với Apple.
-/// Chữ ký này phải được gen từ Backend tuân thủ theo chuẩn Apple StoreKit.
+/// Chữ ký này phải được gen từ Backend tuân thủ theo chuẩn Apple StoreKit 2.
+/// Tham khảo: https://developer.apple.com/documentation/storekit/product/subscriptionoffer/signature
 class PromotionalOfferSignature {
   /// Chuỗi định danh của khoá (Key ID) được cấp trong App Store Connect.
   final String keyIdentifier;
