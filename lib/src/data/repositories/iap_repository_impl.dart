@@ -106,7 +106,8 @@ class IapRepositoryImpl implements IapRepository {
     }
 
     if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
-      _purchaseCompleter!.complete(); // Giải phóng êm đẹp completer cũ thay vì quăng lỗi Unhandled
+      _purchaseCompleter!
+          .complete(); // Giải phóng êm đẹp completer cũ thay vì quăng lỗi Unhandled
     }
     _purchaseCompleter = Completer<void>();
 
@@ -120,18 +121,25 @@ class IapRepositoryImpl implements IapRepository {
 
     final future = _purchaseCompleter!.future;
     return future.timeout(
-      const Duration(seconds: 45),
+      const Duration(seconds: 30),
       onTimeout: () {
         if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
-           _purchaseCompleter = null;
+          _purchaseCompleter = null;
         }
-        throw IapException('Connection timeout. Please check your network and try again.');
+        throw IapException(
+          'Connection timeout. Please check your network and try again.',
+        );
       },
     );
   }
 
   @override
-  Future<void> buyPromotionalOffer(IapProduct product, String offerIdentifier, PromotionalOfferSignature signature, {String? applicationUserName}) async {
+  Future<void> buyPromotionalOffer(
+    IapProduct product,
+    String offerIdentifier,
+    PromotionalOfferSignature signature, {
+    String? applicationUserName,
+  }) async {
     if (product.rawDetails is! ProductDetails) {
       throw IapException('Invalid product details format.');
     }
@@ -147,7 +155,7 @@ class IapRepositoryImpl implements IapRepository {
       signature,
       applicationUserName: applicationUserName,
     );
-    
+
     if (!success) {
       _purchaseCompleter = null;
       throw IapException('Failed to initiate promotional purchase flow.');
@@ -158,9 +166,11 @@ class IapRepositoryImpl implements IapRepository {
       const Duration(seconds: 45),
       onTimeout: () {
         if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
-           _purchaseCompleter = null;
+          _purchaseCompleter = null;
         }
-        throw IapException('Connection timeout. Please check your network and try again.');
+        throw IapException(
+          'Connection timeout. Please check your network and try again.',
+        );
       },
     );
   }
@@ -171,9 +181,9 @@ class IapRepositoryImpl implements IapRepository {
       _purchaseCompleter!.complete();
     }
     _purchaseCompleter = Completer<void>();
-    
+
     await remoteDataSource.restorePurchases();
-    
+
     // Restore stream might not complete successfully if no purchases, but we don't block forever
     // Usually we don't await restore through completer, to prevent hanging if no products are found.
     _purchaseCompleter?.complete();
@@ -238,7 +248,7 @@ class IapRepositoryImpl implements IapRepository {
           print('Invalid purchase receipt. Removing from queue.');
         }
         await remoteDataSource.completePurchase(purchase);
-        
+
         if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
           _purchaseCompleter!.completeError(IapException('Invalid receipt'));
           _purchaseCompleter = null;
@@ -259,25 +269,25 @@ class IapRepositoryImpl implements IapRepository {
 
       // 5. Lưu cục bộ (cache local DB/SharedPreferences) để nhỡ mất mạng
       await _cacheLocal(entitlement);
-      
+
       if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
         _purchaseCompleter!.complete();
         _purchaseCompleter = null;
       }
-      
     } catch (e) {
       if (kDebugMode) {
         print('Error handling success: $e');
       }
       // Chống treo hàng đợi StoreKit 2
-      if (e.toString().contains('liên kết với một tài khoản khác') || 
+      if (e.toString().contains('liên kết với một tài khoản khác') ||
           e.toString().contains('liên kết với tài khoản') ||
           e.toString().contains('Account hopping')) {
-         try {
-           await remoteDataSource.completePurchase(purchase);
-         } catch (finishErr) {
-           if (kDebugMode) print('Could not complete rejected purchase: $finishErr');
-         }
+        try {
+          await remoteDataSource.completePurchase(purchase);
+        } catch (finishErr) {
+          if (kDebugMode)
+            print('Could not complete rejected purchase: $finishErr');
+        }
       }
 
       if (!_entitlementController.isClosed) {
@@ -314,7 +324,7 @@ class IapRepositoryImpl implements IapRepository {
 
     if (config.type == IapProductType.lifetime) {
       return UserEntitlement(
-        isActive: true, 
+        isActive: true,
         isLifetime: true,
         activeProductId: details.productID,
       );
