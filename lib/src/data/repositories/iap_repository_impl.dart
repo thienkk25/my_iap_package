@@ -96,18 +96,29 @@ class IapRepositoryImpl implements IapRepository {
     }).toList();
   }
 
+  /// Completer để đợi kết quả trả về từ luồng mua hàng (thành công/thất bại)
+  Completer<void>? _purchaseCompleter;
+
   @override
   Future<void> buy(IapProduct product) async {
     if (product.rawDetails is! ProductDetails) {
       throw IapException('Invalid product details format.');
     }
 
+    if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+      _purchaseCompleter!.complete(); // Giải phóng êm đẹp completer cũ thay vì quăng lỗi Unhandled
+    }
+    _purchaseCompleter = Completer<void>();
+
     final success = await remoteDataSource.buyProduct(
       product.rawDetails as ProductDetails,
     );
     if (!success) {
+      _purchaseCompleter = null;
       throw IapException('Failed to initiate purchase flow.');
     }
+
+    return _purchaseCompleter!.future;
   }
 
   @override
@@ -115,6 +126,11 @@ class IapRepositoryImpl implements IapRepository {
     if (product.rawDetails is! ProductDetails) {
       throw IapException('Invalid product details format.');
     }
+
+    if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+      _purchaseCompleter!.complete();
+    }
+    _purchaseCompleter = Completer<void>();
 
     final success = await remoteDataSource.buyPromotionalOffer(
       product.rawDetails as ProductDetails,
@@ -124,13 +140,26 @@ class IapRepositoryImpl implements IapRepository {
     );
     
     if (!success) {
+      _purchaseCompleter = null;
       throw IapException('Failed to initiate promotional purchase flow.');
     }
+
+    return _purchaseCompleter!.future;
   }
 
   @override
   Future<void> restore() async {
+    if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+      _purchaseCompleter!.complete();
+    }
+    _purchaseCompleter = Completer<void>();
+    
     await remoteDataSource.restorePurchases();
+    
+    // Restore stream might not complete successfully if no purchases, but we don't block forever
+    // Usually we don't await restore through completer, to prevent hanging if no products are found.
+    _purchaseCompleter?.complete();
+    _purchaseCompleter = null;
   }
 
   @override
@@ -164,17 +193,22 @@ class IapRepositoryImpl implements IapRepository {
 
   void _handlePending(PurchaseDetails purchase) {
     // Chỉ in log báo hiệu đang chờ giao dịch (để UI quay spinner nếu muốn)
-    // Package này giữ chuẩn không can thiệp sâu vào state UI ngoài entitlement.
     if (kDebugMode) {
       print('Pending: ${purchase.productID}');
     }
   }
 
   Future<void> _handleError(PurchaseDetails purchase) async {
+    final errorMessage = purchase.error?.message ?? "User Canceled";
     if (kDebugMode) {
-      print('IAP Error: ${purchase.error?.message ?? "User Canceled"}');
+      print('IAP Error: $errorMessage');
     }
     await remoteDataSource.completePurchase(purchase);
+
+    if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+      _purchaseCompleter!.completeError(IapException(errorMessage));
+      _purchaseCompleter = null;
+    }
   }
 
   Future<void> _handleSuccess(PurchaseDetails purchase) async {
@@ -186,6 +220,11 @@ class IapRepositoryImpl implements IapRepository {
           print('Invalid purchase receipt. Removing from queue.');
         }
         await remoteDataSource.completePurchase(purchase);
+        
+        if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+          _purchaseCompleter!.completeError(IapException('Invalid receipt'));
+          _purchaseCompleter = null;
+        }
         return; // Bỏ qua nếu receipt không hợp lệ
       }
 
@@ -202,13 +241,17 @@ class IapRepositoryImpl implements IapRepository {
 
       // 5. Lưu cục bộ (cache local DB/SharedPreferences) để nhỡ mất mạng
       await _cacheLocal(entitlement);
+      
+      if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+        _purchaseCompleter!.complete();
+        _purchaseCompleter = null;
+      }
+      
     } catch (e) {
       if (kDebugMode) {
         print('Error handling success: $e');
       }
-      // Chống treo hàng đợi StoreKit 2: Nếu lỗi là từ chối do trùng lặp tài khoản (Backend ném ra)
-      // thì BẮT BUỘC phải completePurchase để xóa hóa đơn vĩnh viễn khỏi hàng đợi của OS, 
-      // nếu không mỗi lần mở app lên OS sẽ lại auto gửi lên lỗi lại (vòng lặp vô hạn).
+      // Chống treo hàng đợi StoreKit 2
       if (e.toString().contains('liên kết với một tài khoản khác') || 
           e.toString().contains('liên kết với tài khoản') ||
           e.toString().contains('Account hopping')) {
@@ -221,6 +264,11 @@ class IapRepositoryImpl implements IapRepository {
 
       if (!_entitlementController.isClosed) {
         _entitlementController.addError(e);
+      }
+
+      if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+        _purchaseCompleter!.completeError(e);
+        _purchaseCompleter = null;
       }
     }
   }
