@@ -118,7 +118,16 @@ class IapRepositoryImpl implements IapRepository {
       throw IapException('Failed to initiate purchase flow.');
     }
 
-    return _purchaseCompleter!.future;
+    final future = _purchaseCompleter!.future;
+    return future.timeout(
+      const Duration(seconds: 45),
+      onTimeout: () {
+        if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+           _purchaseCompleter = null;
+        }
+        throw IapException('Connection timeout. Please check your network and try again.');
+      },
+    );
   }
 
   @override
@@ -144,7 +153,16 @@ class IapRepositoryImpl implements IapRepository {
       throw IapException('Failed to initiate promotional purchase flow.');
     }
 
-    return _purchaseCompleter!.future;
+    final future = _purchaseCompleter!.future;
+    return future.timeout(
+      const Duration(seconds: 45),
+      onTimeout: () {
+        if (_purchaseCompleter != null && !_purchaseCompleter!.isCompleted) {
+           _purchaseCompleter = null;
+        }
+        throw IapException('Connection timeout. Please check your network and try again.');
+      },
+    );
   }
 
   @override
