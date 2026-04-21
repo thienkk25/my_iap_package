@@ -285,8 +285,9 @@ class IapRepositoryImpl implements IapRepository {
         try {
           await remoteDataSource.completePurchase(purchase);
         } catch (finishErr) {
-          if (kDebugMode)
+          if (kDebugMode) {
             print('Could not complete rejected purchase: $finishErr');
+          }
         }
       }
 
